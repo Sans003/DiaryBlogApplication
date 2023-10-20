@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -180,8 +181,72 @@ namespace VERYCOOLBLOGOHYEAH
             {
                 title = $"Title: {n.Title}";
                 content = n.Content;
-                likes = $"{n.Likes}";
-                postTime = $"{n.PostTime}";
+                string str = n.Likes.ToString();
+                string likeReplace = $"Likes: {new string(' ', str.Count())}";
+                string likeCount = $"Likes: {n.Likes}";
+                string postTimeReplace = $"Creation Time: {new string(' ', n.PostTime.ToShortDateString().ToString().Count())}";
+                string postTimeStr = $"Creation Time: {n.PostTime.ToShortDateString()}";
+                string exportReplace = $"Export Time: {new string(' ', DateTime.Now.ToShortDateString().ToString().Count())}";
+                string exportTimeStr = $"Export Time: {DateTime.Today.ToShortDateString()}";
+                //Dictionary<string, int> vars = new Dictionary<string, int>();
+                //decimal ugh = 60 / exportReplace.Count();
+                //decimal maxLines = Math.Ceiling(ugh * 100) / 100;
+                //for (int ec = 0; ec <= maxLines; ec++)
+                //{
+                //    vars.Add(string.Format("line{0}", i.ToString()), i);
+                //    for (int i = 0; i <= exportReplace.Count();)
+                //    {
+                //        vars["line"]
+                //    }
+                //}
+
+
+
+
+                string exportTemplate =
+                    $"""
+                    ┌────────────────────────────────────────────────────────────────┐
+                    │                                                                │
+                    │  Creation Time: {n.PostTime:dd.MM.yyyy}                         Likes: {n.Likes,-5}│
+                    │  Export Time: {DateTime.Now:dd.MM.yyyy}                                       │
+                    │                                                                │
+                    │  Title: {PostTitle.Text,-55}│
+                    │                                                                │
+                    │    │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    │                                                                │
+                    └────────────────────────────────────────────────────────────────┘
+                    """;
+                exportTemplate = exportTemplate.Replace(exportReplace, exportTimeStr);
+                //exportTemplate = exportTemplate.Replace(Post, PostTitle);
+                System.IO.File.WriteAllText(@"C:\Users\vincent.volkmar\Downloads\test.txt", exportTemplate);
+                Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", @"C:\Users\vincent.volkmar\Downloads\test.txt");
             }
         }
     }
