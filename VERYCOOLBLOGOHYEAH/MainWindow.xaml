@@ -44,7 +44,13 @@
         <Button Grid.Column="1" Content="Edit" HorizontalAlignment="Left" Margin="10,5,0,0" Grid.Row="3" VerticalAlignment="Top" Height="35" Width="100" Click="EditPost"/>
         <Button Grid.Column="1" Name="deleteBtn" Content="Delete" HorizontalAlignment="Left" Margin="125,5,0,0" Grid.Row="3" VerticalAlignment="Top" Height="35" Width="100" Click="deleteBtn_Click"/>
         <Button Grid.Column="1" Name="shareBtn" Content="Share" HorizontalAlignment="Left" Margin="240,5,0,0" Grid.Row="3" VerticalAlignment="Top" Height="35" Width="100" Click="SharePost"/>
-        <RichTextBox  ScrollViewer.CanContentScroll="True" Name="BlogText" Grid.Column="4" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Top" Width="350" Height="380" Margin="0,20,0,0" AutoWordSelection="True"/>
+        <RichTextBox  ScrollViewer.CanContentScroll="True" Name="BlogText" Grid.Column="4" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Top" Width="350" Height="380" Margin="0,20,0,0" AutoWordSelection="True" KeyDown="richTextBox1_KeyDown">
+            <RichTextBox.Resources>
+                <Style TargetType="{x:Type Paragraph}">
+                    <Setter Property="Margin" Value="0" />
+                </Style>
+            </RichTextBox.Resources>
+        </RichTextBox>
         <Button Grid.Column="4" Name="postBtn" Content="Post" HorizontalAlignment="Left" Margin="50,5,0,0" Grid.Row="3" VerticalAlignment="Top" Height="35" Width="100" Click="PostEntry"/>
         <Button Grid.Column="4" Name="clearBtn" Content="Discard" HorizontalAlignment="Left" Margin="200,5,0,0" Grid.Row="3" VerticalAlignment="Top" Height="35" Width="100" Click="clearBtn_Click"/>
 

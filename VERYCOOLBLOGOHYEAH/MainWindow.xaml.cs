@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -175,8 +176,22 @@ namespace VERYCOOLBLOGOHYEAH
             }
         }
 
+        private string[] SplitContentToFitTemplate(string content, int maxLength)
+        {
+            List<string> lines = new List<string>();
+
+            for (int i = 0; i < content.Length; i += maxLength)
+            {
+                int length = Math.Min(maxLength, content.Length - i);
+                lines.Add(content.Substring(i, length));
+            }
+
+            return lines.ToArray();
+        }
+
         private void SharePost(object sender, RoutedEventArgs e)
         {
+            string exportTemplate;
             foreach (var n in PostsList.SelectedItems.OfType<JournalEntry>())
             {
                 title = $"Title: {n.Title}";
@@ -201,115 +216,145 @@ namespace VERYCOOLBLOGOHYEAH
                 //}
 
 
-
-
-                string exportTemplate =
-                    $"""
+                if (n.Title.Count() > 52)
+                {
+                    string[] Titlelines = SplitContentToFitTemplate(n.Title, 52);
+                    exportTemplate =
+                        $"""
                     ┌────────────────────────────────────────────────────────────────┐
                     │                                                                │
                     │  Creation Time: {n.PostTime:dd.MM.yyyy}                         Likes: {n.Likes,-5}│
                     │  Export Time: {DateTime.Now:dd.MM.yyyy}                                       │
                     │                                                                │
-                    │  Title: {PostTitle.Text,-55}│
-                    │                                                                │
-                    │    │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    │                                                                │
-                    └────────────────────────────────────────────────────────────────┘
+                    │  Title: {Titlelines.First(),-55}│
                     """;
-                exportTemplate = exportTemplate.Replace(exportReplace, exportTimeStr);
-                //exportTemplate = exportTemplate.Replace(Post, PostTitle);
-                System.IO.File.WriteAllText(@"C:\Users\vincent.volkmar\Downloads\test.txt", exportTemplate);
-                Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", @"C:\Users\vincent.volkmar\Downloads\test.txt");
+
+                    foreach (string line in Titlelines.Skip(1))
+                    {
+                        if (line.Count() < 55)
+                        {
+                            exportTemplate +=
+        @$"
+│  {line, -62}";
+                            exportTemplate += "|";
+                        }
+                    }
+                    exportTemplate += "\r\n│                                                                │";
+
+                }
+                else
+                {
+
+                    exportTemplate =
+                        $"""
+                    ┌────────────────────────────────────────────────────────────────┐
+                    │                                                                │
+                    │  Creation Time: {n.PostTime:dd.MM.yyyy}                         Likes: {n.Likes,-5}│
+                    │  Export Time: {DateTime.Now:dd.MM.yyyy}                                       │
+                    │                                                                │
+                    │  Title: {n.Title,-55}│
+                    │                                                                │
+                    """;
+                }
+
+
+
+                string[] contentLines = SplitContentToFitTemplate(n.Content, 60);
+
+                string filePath = @"C:\Users\user\Downloads\test.txt";
+                string last = contentLines.Last();
+                foreach (string line in contentLines)
+                {
+                    if (line.Count() <= 60 && line != last)
+                    {
+                        exportTemplate +=
+    @$"
+│  {line, -62}|";
+                    }
+                    else if (line == last)
+                    {
+                        string lline = line.Replace("\r\n", "");
+                        exportTemplate += @$"{Environment.NewLine}│  {lline,-62}|{Environment.NewLine}";
+                    }
+                    else
+                    {
+                        exportTemplate +=
+    @$"{Environment.NewLine}│  {line,-62}│";
+                    }
+                }
+                exportTemplate +=
+@$"└────────────────────────────────────────────────────────────────┘";
+                File.WriteAllText(@"C:\Users\user\Downloads\test.txt", exportTemplate);
+                Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", filePath);
             }
         }
-    }
 
-    public class JournalEntries
-    {
-        public ObservableCollection<JournalEntry> Items { get; } = new();
-    }
 
-    public class JournalEntry : INotifyPropertyChanged
-    {
-        private int id;
-        public int ID
+        public class JournalEntries
         {
-            get => id;
-            set => SetField(ref id, value);
+            public ObservableCollection<JournalEntry> Items { get; } = new();
         }
 
-        private DateTime postTime;
-        public DateTime PostTime
+        public class JournalEntry : INotifyPropertyChanged
         {
-            get => postTime;
-            set => SetField(ref postTime, value);
+            private int id;
+            public int ID
+            {
+                get => id;
+                set => SetField(ref id, value);
+            }
+
+            private DateTime postTime;
+            public DateTime PostTime
+            {
+                get => postTime;
+                set => SetField(ref postTime, value);
+            }
+
+            private string title;
+            public string Title
+            {
+                get => title;
+                set => SetField(ref title, value);
+            }
+
+            private string content;
+            public string Content
+            {
+                get => content;
+                set => SetField(ref content, value);
+            }
+
+            private int likes;
+            public int Likes
+            {
+                get => likes;
+                set => SetField(ref likes, value);
+            }
+
+            private string liked;
+            public string Liked
+            {
+                get => liked;
+                set => SetField(ref liked, value);
+            }
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+
+            protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+            protected bool SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
+            {
+                if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+                field = value;
+                OnPropertyChanged(propertyName);
+                return true;
+            }
         }
-
-        private string title;
-        public string Title
+        private void richTextBox1_KeyDown(object sender, KeyEventArgs e)
         {
-            get => title;
-            set => SetField(ref title, value);
-        }
-
-        private string content;
-        public string Content
-        {
-            get => content;
-            set => SetField(ref content, value);
-        }
-
-        private int likes;
-        public int Likes
-        {
-            get => likes;
-            set => SetField(ref likes, value);
-        }
-
-        private string liked;
-        public string Liked
-        {
-            get => liked;
-            set => SetField(ref liked, value);
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
-        protected bool SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
-        {
-            if (EqualityComparer<T>.Default.Equals(field, value)) return false;
-            field = value;
-            OnPropertyChanged(propertyName);
-            return true;
+            if (e.Key == Key.Enter)
+                e.Handled = true;
         }
     }
 }
