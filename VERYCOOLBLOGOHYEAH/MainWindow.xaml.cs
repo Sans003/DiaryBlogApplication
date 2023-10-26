@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -82,6 +83,7 @@ namespace VERYCOOLBLOGOHYEAH
                 Id = o.ID;
                 Editing = true;
                 postBtn.Content = "Save Changes";
+                Order_Selected(sender, e);
             }
         }
         private void Order_Selected(object sender, RoutedEventArgs e)
@@ -97,6 +99,7 @@ namespace VERYCOOLBLOGOHYEAH
             };
             PostsList.Items.SortDescriptions.Clear();
             PostsList.Items.SortDescriptions.Add(new SortDescription(property, direction));
+            PostsList.Items.IsLiveSorting = true;
             PostsList.Items.Refresh();
         }
 
@@ -106,31 +109,57 @@ namespace VERYCOOLBLOGOHYEAH
             {
                 if (Editing)
                 {
-                    JournalEntry entry = journalEntries.Items.Single(i => i.ID == Id);
-                    entry.Title = PostTitle.Text;
-                    entry.Content = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd).Text;
-                    entry.PostTime = postTime;
-                    entry.ID = Id;
-                    entry.Likes = likes;
-                    entry.Liked = liked;
-                    PostsList.Items.Refresh();
-                    Editing = false;
-                    postBtn.Content = "Post";
+                    try
+                    {
+                        if (PostTitle.Text != "")
+                        {
+                            JournalEntry entry = journalEntries.Items.Single(i => i.ID == Id);
+                            entry.Title = PostTitle.Text;
+                            entry.Content = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd).Text;
+                            entry.PostTime = postTime;
+                            entry.ID = Id;
+                            entry.Likes = likes;
+                            entry.Liked = liked;
+                            PostsList.Items.Refresh();
+                            Editing = false;
+                            postBtn.Content = "Post";
+                        }
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        if (PostTitle.Text != "")
+                        {
+                            JournalEntry entry = new JournalEntry();
+                            entry.Title = PostTitle.Text;
+                            entry.Content = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd).Text;
+                            entry.PostTime = postTime;
+                            entry.ID = Id;
+                            entry.Likes = 0;
+                            entry.Liked = $"♡";
+                            Editing = false;
+                            postBtn.Content = "Post";
+                            journalEntries.Items.Add(entry);
+                            PostsList.Items.Refresh();
+                        }
+                    }
                 }
                 else
                 {
-                    JournalEntry entry = new JournalEntry();
-                    entry.Title = PostTitle.Text;
-                    entry.Content = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd).Text;
-                    entry.PostTime = DateTime.Now;
-                    if (entry.Likes > 1)
+                    if (PostTitle.Text != "")
                     {
-                        entry.Likes = 0;
+                        JournalEntry entry = new JournalEntry();
+                        entry.Title = PostTitle.Text;
+                        entry.Content = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd).Text;
+                        entry.PostTime = DateTime.Now;
+                        if (entry.Likes > 1)
+                        {
+                            entry.Likes = 0;
+                        }
+                        entry.ID = journalEntries.Items.Select(x => x.ID).DefaultIfEmpty().Max() + 1;
+                        entry.Liked = $"♡"; ///&#x2665
+                        journalEntries.Items.Add(entry);
+                        PostsList.Items.Refresh();
                     }
-                    entry.ID = journalEntries.Items.Select(x => x.ID).DefaultIfEmpty().Max() + 1;
-                    entry.Liked = $"♡"; ///&#x2665
-                    journalEntries.Items.Add(entry);
-                    PostsList.Items.Refresh();
                 }
             }
             PostTitle.Clear();
@@ -235,7 +264,7 @@ namespace VERYCOOLBLOGOHYEAH
                         {
                             exportTemplate +=
         @$"
-│  {line, -62}";
+│  {line,-62}";
                             exportTemplate += "|";
                         }
                     }
@@ -269,12 +298,12 @@ namespace VERYCOOLBLOGOHYEAH
                     {
                         exportTemplate +=
     @$"
-│  {line, -62}|";
+│  {line,-62}│";
                     }
                     else if (line == last)
                     {
                         string lline = line.Replace("\r\n", "");
-                        exportTemplate += @$"{Environment.NewLine}│  {lline,-62}|{Environment.NewLine}";
+                        exportTemplate += @$"{Environment.NewLine}│  {lline,-62}│{Environment.NewLine}";
                     }
                     else
                     {
@@ -283,9 +312,17 @@ namespace VERYCOOLBLOGOHYEAH
                     }
                 }
                 exportTemplate +=
-@$"└────────────────────────────────────────────────────────────────┘";
-                File.WriteAllText(@"C:\Users\user\Downloads\test.txt", exportTemplate);
-                Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", filePath);
+@$"│                                                                │
+└────────────────────────────────────────────────────────────────┘";
+                SaveFileDialog saveFileDialog = new SaveFileDialog();
+                saveFileDialog.Filter = "Text file (*.txt)|*.txt";
+                saveFileDialog.InitialDirectory = @"%USERPROFILE%\Documents";
+                saveFileDialog.Title = "Export Post as";
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    File.WriteAllText(saveFileDialog.FileName, exportTemplate);
+                }
+                Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", saveFileDialog.FileName);
             }
         }
 
