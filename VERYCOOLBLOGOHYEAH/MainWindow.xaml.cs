@@ -1,10 +1,9 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -14,8 +13,6 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Markup;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
-using static VERYCOOLBLOGOHYEAH.MainWindow;
 
 namespace VERYCOOLBLOGOHYEAH;
 
@@ -24,12 +21,14 @@ namespace VERYCOOLBLOGOHYEAH;
 /// </summary>
 public partial class MainWindow : Window
 {
-    public bool Editing;
+    public JournalEntries journalEntries = new JournalEntries();
 
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new JournalEntries();
+        journalEntries.Items.Load();
+        DataContext = journalEntries;
+        PostsList.ItemsSource = journalEntries.Items.Local.ToObservableCollection();
     }
 
     private void ChangeFormating(object sender, RoutedEventArgs e)
@@ -63,7 +62,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Order_Selected(object sender, RoutedEventArgs e)
+    private void Order_Selected(object sender, SelectionChangedEventArgs e)
     {
         var (property, direction) = ((ComboBoxItem)Filter.SelectedItem).Name switch
         {
@@ -80,31 +79,25 @@ public partial class MainWindow : Window
         PostsList.Items.Refresh();
     }
 
-    private void NewEntry(object sender, RoutedEventArgs e)
+    private void SaveEntry(object sender, RoutedEventArgs e)
     {
-        if (DataContext is JournalEntries journalEntries)
+        if (journalEntries.CurrentEntry != null && !journalEntries.Items.Local.Contains(journalEntries.CurrentEntry))
         {
-            if (journalEntries.Items.Count == 0 | journalEntries.CurrentEntry == null)
+            if (journalEntries.CurrentEntry.Title != null)
             {
-                TextRange range = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd);
-                journalEntries.CurrentEntry = new()
-                {
-                    Title = PostTitle.Text,
-                    Content = XamlWriter.Save(BlogText.Document),
-                    PostTime = DateTime.Now,
-                    ID = journalEntries.Items.Select(x => x.ID).DefaultIfEmpty().Max() + 1,
-                    Liked = $"♡", ///&#x2665
-                    Likes = 0
-                };
+                //TextRange range = new TextRange(BlogText.Document.ContentStart, BlogText.Document.ContentEnd);
+                //journalEntries.CurrentEntry = new()
+                //{
+                //    Title = PostTitle.Text,
+                //    Content = XamlWriter.Save(BlogText.Document),
+                //};
+                journalEntries.CurrentEntry.PostTime = DateTime.Now;
+                journalEntries.CurrentEntry.Liked = "♡"; ///&#x2665
+                journalEntries.CurrentEntry.Likes = 0;
+                journalEntries.Items.Add(journalEntries.CurrentEntry);
             }
-            else if (journalEntries.CurrentEntry.Title == null | journalEntries.CurrentEntry.Content == null)
-            {
-            }
-            else
-            {
-                journalEntries.AddNewEntry();
-                ClearText();
-            }
+
+            journalEntries.SaveChanges();
         }
     }
 
@@ -122,42 +115,27 @@ public partial class MainWindow : Window
                 entry.Likes++;
                 entry.Liked = "♥"; ;
             }
-            PostsList.Items.Refresh();
+            //PostsList.Items.Refresh();
+            //journalEntries.Items.Update(entry);
+            journalEntries.SaveChanges();
         }
     }
 
-    private void ClearBtn_Click(object sender, RoutedEventArgs e)
+    private void NewBtn_Click(object sender, RoutedEventArgs e)
     {
-        ClearText();
+        journalEntries.CurrentEntry = new();
     }
 
     private void DeleteBtn_Click(object sender, RoutedEventArgs e)
     {
         RemoveEntry();
     }
+
     private void RemoveEntry()
     {
-        if (DataContext is JournalEntries journalEntries)
-        {
-            journalEntries.Items.Remove(journalEntries.CurrentEntry);
-            for (int i = journalEntries.Items.Count - 1; i >= 0; i--)
-            {
-                if (journalEntries.Items[i] == null)
-                    journalEntries.Items.RemoveAt(i);
-            }
-            PostsList.Items.Refresh();
-        }
-    }
-    private void ClearText()
-    {
-        if (DataContext is JournalEntries journalEntries)
-        {
-            if (journalEntries.CurrentEntry != null)
-            {
-                journalEntries.CurrentEntry.Title = null;
-                journalEntries.CurrentEntry.Content = null;
-            }
-        }
+        journalEntries.Items.Remove(journalEntries.CurrentEntry);
+        journalEntries.SaveChanges();
+        //PostsList.Items.Refresh();
     }
 
     private string[] SplitContentToFitTemplate(string content, int maxLength)
@@ -173,30 +151,45 @@ public partial class MainWindow : Window
         return lines.ToArray();
     }
 
+    private IEnumerable<string> SmartSplit(string input, int maxLength)
+    {
+        int i = 0;
+        while (i + maxLength < input.Length)
+        {
+            int index = input.LastIndexOf(' ', i + maxLength);
+            if (index <= 0)
+            {
+                index = maxLength;
+            }
+            yield return input.Substring(i, index - i);
+
+            i = index + 1;
+        }
+
+        yield return input.Substring(i);
+    }
     private void SharePost(object sender, RoutedEventArgs e)
     {
         string exportTemplate;
-        if (DataContext is JournalEntries journalEntries)
+        var n = journalEntries.CurrentEntry;
+        //Dictionary<string, int> vars = new Dictionary<string, int>();
+        //decimal ugh = 60 / exportReplace.Count();
+        //decimal maxLines = Math.Ceiling(ugh * 100) / 100;
+        //for (int ec = 0; ec <= maxLines; ec++)
+        //{
+        //    vars.Add(string.Format("line{0}", i.ToString()), i);
+        //    for (int i = 0; i <= exportReplace.Count();)
+        //    {
+        //        vars["line"]
+        //    }
+        //}
+        try
         {
-            var n = journalEntries.CurrentEntry;
-            //Dictionary<string, int> vars = new Dictionary<string, int>();
-            //decimal ugh = 60 / exportReplace.Count();
-            //decimal maxLines = Math.Ceiling(ugh * 100) / 100;
-            //for (int ec = 0; ec <= maxLines; ec++)
-            //{
-            //    vars.Add(string.Format("line{0}", i.ToString()), i);
-            //    for (int i = 0; i <= exportReplace.Count();)
-            //    {
-            //        vars["line"]
-            //    }
-            //}
-            try
+            if (n.Title.Length > 52)
             {
-                if (n.Title.Length > 52)
-                {
-                    string[] Titlelines = SplitContentToFitTemplate(n.Title, 52);
-                    exportTemplate =
-                        $"""
+                string[] Titlelines = SplitContentToFitTemplate(n.Title, 52);
+                exportTemplate =
+                    $"""
                     ┌────────────────────────────────────────────────────────────────┐
                     │                                                                │
                     │  Creation Time: {n.PostTime:dd.MM.yyyy}                         Likes: {n.Likes,-5}│
@@ -205,24 +198,24 @@ public partial class MainWindow : Window
                     │  Title: {Titlelines.First(),-55}│
                     """;
 
-                    foreach (string line in Titlelines.Skip(1))
-                    {
-                        if (line.Length < 55)
-                        {
-                            exportTemplate +=
-        @$"
-│  {line,-62}";
-                            exportTemplate += "|";
-                        }
-                    }
-                    exportTemplate += "\r\n│                                                                │";
-
-                }
-                else
+                foreach (string line in Titlelines.Skip(1))
                 {
+                    if (line.Length < 55)
+                    {
+                        exportTemplate +=
+    @$"
+│  {line,-62}";
+                        exportTemplate += "|";
+                    }
+                }
+                exportTemplate += "\r\n│                                                                │";
 
-                    exportTemplate =
-                        $"""
+            }
+            else
+            {
+
+                exportTemplate =
+                    $"""
                     ┌────────────────────────────────────────────────────────────────┐
                     │                                                                │
                     │  Creation Time: {n.PostTime:dd.MM.yyyy}                         Likes: {n.Likes,-5}│
@@ -231,90 +224,72 @@ public partial class MainWindow : Window
                     │  Title: {n.Title,-55}│
                     │                                                                │
                     """;
-                }
+            }
 
 
-
-                string[] contentLines = SplitContentToFitTemplate(n.TextContent, 60);
-                try
+            IEnumerable<string> contentLines = SmartSplit(n.TextContent, 60);
+            try
+            {
+                string last = contentLines.Last();
+                foreach (string line in contentLines)
                 {
-                    string last = contentLines.Last();
-                    foreach (string line in contentLines)
+                    if (line.Length <= 60 && line != last)
                     {
-                        if (line.Length <= 60 && line != last)
-                        {
-                            exportTemplate +=
-        @$"
-│  {line,-62}│";
-                        }
-                        else if (line == last)
-                        {
-                            string lline = line.Replace("\r\n", "");
-                            exportTemplate += @$"{Environment.NewLine}│  {lline,-62}│{Environment.NewLine}";
-                        }
-                        else
-                        {
-                            exportTemplate +=
-        @$"{Environment.NewLine}│  {line,-62}│";
-                        }
+                        string lline = line.Replace("\r", "");
+                        string llline = lline.Replace("\n", "");
+                        exportTemplate += @$"{Environment.NewLine}│  {llline,-62}│";
+                    }
+                    else if (line == last)
+                    {
+                        string lline = line.Replace("\r", "");
+                        string llline = lline.Replace("\n", "");
+                        exportTemplate += @$"{Environment.NewLine}│  {llline,-62}│";
+                    }
+                    else
+                    {
+                        string lline = line.Replace("\r", "");
+                        string llline = lline.Replace("\n", "");
+                        exportTemplate += @$"{Environment.NewLine}│  {llline,-62}│";
                     }
                 }
-                catch (InvalidOperationException)
-                {
-                    string last = $"\n│  {-62}│";
-                }
-                exportTemplate +=
-    @$"
-│                                                                │
-└────────────────────────────────────────────────────────────────┘";
-
-                SaveFileDialog saveFileDialog = new SaveFileDialog();
-                saveFileDialog.Filter = "Text file (*.txt)|*.txt";
-                saveFileDialog.InitialDirectory = @"%USERPROFILE%\Documents";
-                saveFileDialog.Title = "Export Post as";
-                if (saveFileDialog.ShowDialog() == true)
-                {
-                    File.WriteAllText(saveFileDialog.FileName, exportTemplate);
-                }
-                Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", saveFileDialog.FileName);
-                }
-            catch (NullReferenceException)
-            {
-                MessageBox.Show("ERROR: THIS BITCH'S EMPTY");
             }
+            catch (InvalidOperationException)
+            {
+                string last = $"{Environment.NewLine}│  {-62}│";
+            }
+            exportTemplate += $"{Environment.NewLine}│                                                                │{Environment.NewLine}└────────────────────────────────────────────────────────────────┘";
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Text file (*.txt)|*.txt";
+            saveFileDialog.InitialDirectory = @"%USERPROFILE%\Documents";
+            saveFileDialog.Title = "Export Post as";
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                File.WriteAllText(saveFileDialog.FileName, exportTemplate);
+            }
+            Process.Start(@"C:\Program Files\Notepad++\notepad++.exe", saveFileDialog.FileName);
+        }
+        catch (NullReferenceException)
+        {
+            MessageBox.Show("ERROR: THIS BITCH'S EMPTY");
         }
     }
-
-    public class JournalEntries : INotifyPropertyChanged
+    public class JournalEntries : DbContext, INotifyPropertyChanged
     {
-        public JournalEntries()
+        public DbSet<JournalEntry> Items { get; set; }
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            AddNewEntry();
+            optionsBuilder.UseSqlServer("Server=.;Database=stupid;Trusted_Connection=True;MultipleActiveResultSets=True;Trust Server Certificate=True;App=BlogApp");
         }
 
-        public ObservableCollection<JournalEntry> Items { get; } = new();
-
-        private JournalEntry currentEntry;
-        public JournalEntry CurrentEntry
+        private JournalEntry? currentEntry;
+        public JournalEntry? CurrentEntry
         {
             get => currentEntry;
             set
             {
-                if (!Items.Contains(value)) Items.Add(value);
                 SetField(ref currentEntry, value);
             }
-        }
-
-        [MemberNotNull(nameof(currentEntry))]
-        public void AddNewEntry()
-        {
-            CurrentEntry = new()
-            {
-                PostTime = DateTime.Now,
-                ID = Items.Select(x => x.ID).DefaultIfEmpty().Max() + 1,
-                Liked = $"♡", ///&#x2665
-                Likes = 0
-            };
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
